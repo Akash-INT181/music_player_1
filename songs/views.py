@@ -2,6 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.response import Response
+from rest_framework.decorators import action
 
 from .serializers import (
     AllDisplayPlaylist,
@@ -14,6 +15,7 @@ from .serializers import (
 )
 
 from .models import Genre, Playlist, Rating, Song
+from django.contrib.postgres.search import SearchVector, SearchQuery
 
 
 class SongViewSet(viewsets.ModelViewSet):
@@ -21,6 +23,41 @@ class SongViewSet(viewsets.ModelViewSet):
     serializer_class = SongSerializer
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
+    # filter_backends = [
+    #     "django_filters.rest_framework",
+    #     "rest_framework.search.SearchFilter",
+    # ]
+    # search_fields = [
+    #     "song_name",
+    #     "genre__genre_name",
+    #     "album__album_name",
+    #     "album__artist__artist_name",
+    # ]
+
+    @action(detail=False, methods=["get"])
+    def search_songs(self, request):
+        query = request.query_params.get("q", None)
+
+        if not query:
+            return Response(
+                {"error": 'Missing search query parameter "q"'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Perform full-text search
+        songs = (
+            Song.objects.annotate(
+                rank=SearchVector("song_name", weight="A")
+                + SearchVector("genre__genre_name", weight="A")
+                + SearchVector("album__album_name", weight="A")
+                + SearchVector("album__artist__artist_name", weight="A")
+            )
+            .filter(rank=SearchQuery(query))
+            .order_by("-rank")
+        )
+
+        serializer = self.get_serializer(songs, many=True)
+        return Response(serializer.data)
 
 
 class RatingViewSet(viewsets.ModelViewSet):

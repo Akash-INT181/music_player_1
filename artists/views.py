@@ -51,10 +51,10 @@ class ArtistSongViewSet(viewsets.ReadOnlyModelViewSet):
 
 @api_view(["GET"])
 def create_album(request):
-    df = pd.read_csv("D:\\DRF\\music_player\\harry's house.csv", header=0)
+    df = pd.read_csv("D:\\DRF\\music_player_1\\rare.csv", header=0)
     aid = Album.objects.create(
         album_name=df.loc[0]["album"],
-        artist=Artist.objects.get(artist_name=df.loc[0]["artist"]),
+        artist=Artist.objects.get(artist_name="Selena Gomez"),
     )
     aid.save()
     for index, row in df.iterrows():
