@@ -15,7 +15,7 @@ from .serializers import (
 )
 
 from .models import Genre, Playlist, Rating, Song
-from django.contrib.postgres.search import SearchVector, SearchQuery
+from elasticconnect.elastic_search_config import es, SONG_INDEX_NAME
 
 
 class SongViewSet(viewsets.ModelViewSet):
@@ -23,16 +23,13 @@ class SongViewSet(viewsets.ModelViewSet):
     serializer_class = SongSerializer
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
-    # filter_backends = [
-    #     "django_filters.rest_framework",
-    #     "rest_framework.search.SearchFilter",
-    # ]
-    # search_fields = [
-    #     "song_name",
-    #     "genre__genre_name",
-    #     "album__album_name",
-    #     "album__artist__artist_name",
-    # ]
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.played += 1
+        instance.save()
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
 
     @action(detail=False, methods=["get"])
     def search_songs(self, request):
@@ -44,20 +41,28 @@ class SongViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Perform full-text search
-        songs = (
-            Song.objects.annotate(
-                rank=SearchVector("song_name", weight="A")
-                + SearchVector("genre__genre_name", weight="A")
-                + SearchVector("album__album_name", weight="A")
-                + SearchVector("album__artist__artist_name", weight="A")
-            )
-            .filter(rank=SearchQuery(query))
-            .order_by("-rank")
-        )
+        data = es.search(index=SONG_INDEX_NAME, q="*" + query + "*", size=100)
+        search = []
+        for item in data["hits"]["hits"]:
+            item1 = item["_source"]
+            item1["_score"] = item["_score"]
+            search.append(item["_source"])
+        return Response(search)
 
-        serializer = self.get_serializer(songs, many=True)
-        return Response(serializer.data)
+        # Perform full-text search
+        # songs = (
+        #     Song.objects.annotate(
+        #         rank=SearchVector("song_name", weight="A")
+        #         + SearchVector("genre__genre_name", weight="B")
+        #         + SearchVector("album__album_name", weight="C")
+        #         + SearchVector("album__artist__artist_name", weight="D")
+        #     )
+        #     .filter(rank=SearchQuery(query))
+        #     .order_by("-rank")
+        # )
+
+        # serializer = self.get_serializer(songs, many=True)
+        # return Response(serializer.data)
 
 
 class RatingViewSet(viewsets.ModelViewSet):

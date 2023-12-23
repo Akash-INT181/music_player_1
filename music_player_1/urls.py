@@ -22,4 +22,5 @@ urlpatterns = [
     path("", include("users.urls")),
     path("", include("artists.urls")),
     path("", include("songs.urls")),
+    path("", include("elasticconnect.urls")),
 ]

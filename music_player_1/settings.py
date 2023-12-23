@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     "songs",
     "artists",
     "corsheaders",
+    "elasticconnect",
 ]
 
 MIDDLEWARE = [
