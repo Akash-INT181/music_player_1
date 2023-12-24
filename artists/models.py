@@ -6,6 +6,9 @@ from django.db import models
 class Artist(models.Model):
     artist_name = models.CharField(max_length=50, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    password = models.CharField(max_length=350)
+
+    username_field = "email"
 
     def __str__(self):
         return str(self.artist_name)

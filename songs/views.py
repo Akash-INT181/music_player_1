@@ -4,6 +4,8 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.response import Response
 from rest_framework.decorators import action
 
+from artists.views import CustomJWTAuthentication, HasAnyPermissions
+
 from .serializers import (
     AllDisplayPlaylist,
     GenreSerializer,
@@ -152,5 +154,5 @@ class PlaylistSongViewSet(viewsets.ReadOnlyModelViewSet):
 class GenreViewSet(viewsets.ModelViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
+    authentication_classes = [CustomJWTAuthentication]
+    permission_classes = [HasAnyPermissions]

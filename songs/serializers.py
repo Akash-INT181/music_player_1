@@ -1,7 +1,11 @@
 from rest_framework import serializers
 from artists.models import Album
 
-from artists.serializers import AlbumArtistSeralizer
+from artists.serializers import (
+    AlbumArtistSeralizer,
+    AlbumOnlySerializer,
+    AlbumSerializer,
+)
 from users.serializers import UserIdSerializer, UserMinimalSerializer
 
 # from artists.serializers import AlbumSerializer
@@ -46,6 +50,15 @@ class PlaylistOnlySerializer(serializers.ModelSerializer):
         fields = ["id", "playlist_name"]
 
 
+class SongCreateSerializer(serializers.ModelSerializer):
+    album = serializers.PrimaryKeyRelatedField(queryset=Album.objects.all())
+    genre = serializers.PrimaryKeyRelatedField(queryset=Genre.objects.all())
+
+    class Meta:
+        model = Song
+        fields = "__all__"
+
+
 class SongSerializer(serializers.ModelSerializer):
     album = AlbumArtistSeralizer(many=False)
     genre = GenreSerializer(many=False)
@@ -59,17 +72,21 @@ class SongSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         representation = super().to_representation(instance)
         user = self.context["request"].user
-        if user.is_authenticated:
-            user_id = user.id
-            # print(user_id)
-            playlists = instance.playlists.filter(user=user)
-            representation["playlists"] = PlaylistOnlySerializer(
-                playlists, many=True
-            ).data
-            representation["rating"] = RatingSerializer(
-                instance.rating.filter(user_id=user_id), many=True
-            ).data
-        else:
+        try:
+            if user.is_authenticated:
+                user_id = user.id
+                # print(user_id)
+                playlists = instance.playlists.filter(user=user)
+                representation["playlists"] = PlaylistOnlySerializer(
+                    playlists, many=True
+                ).data
+                representation["rating"] = RatingSerializer(
+                    instance.rating.filter(user_id=user_id), many=True
+                ).data
+            else:
+                representation["rating"] = []
+                representation["playlists"] = []
+        except:
             representation["rating"] = []
             representation["playlists"] = []
 
