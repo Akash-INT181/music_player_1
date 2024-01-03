@@ -5,6 +5,8 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 from artists.views import CustomJWTAuthentication, HasAnyPermissions
+from songs.document import SongDocument
+from django_elasticsearch_dsl_drf.pagination import QueryFriendlyPageNumberPagination
 
 from .serializers import (
     AllDisplayPlaylist,
@@ -13,11 +15,23 @@ from .serializers import (
     PlaylistSerializer,
     PlaylistSongSerializer,
     RatingSerializer,
+    SongDocumentSerializer,
     SongSerializer,
 )
 
 from .models import Genre, Playlist, Rating, Song
-from elasticconnect.elastic_search_config import es, SONG_INDEX_NAME
+
+# from elasticconnect.elastic_search_config import es, SONG_INDEX_NAME
+
+from django_elasticsearch_dsl_drf.constants import SUGGESTER_COMPLETION
+from django_elasticsearch_dsl_drf.filter_backends import (
+    CompoundSearchFilterBackend,
+    FilteringFilterBackend,
+    SuggesterFilterBackend,
+    MultiMatchSearchFilterBackend,
+)
+from django_elasticsearch_dsl_drf.viewsets import DocumentViewSet
+from django_elasticsearch_dsl_drf.pagination import PageNumberPagination
 
 
 class SongViewSet(viewsets.ModelViewSet):
@@ -43,28 +57,29 @@ class SongViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        data = es.search(index=SONG_INDEX_NAME, q="*" + query + "*", size=100)
-        search = []
-        for item in data["hits"]["hits"]:
-            item1 = item["_source"]
-            item1["_score"] = item["_score"]
-            search.append(item["_source"])
-        return Response(search)
+        # data = es.search(index=SONG_INDEX_NAME, q="*" + query + "*", size=100)
+        # search = []
 
-        # Perform full-text search
-        # songs = (
-        #     Song.objects.annotate(
-        #         rank=SearchVector("song_name", weight="A")
-        #         + SearchVector("genre__genre_name", weight="B")
-        #         + SearchVector("album__album_name", weight="C")
-        #         + SearchVector("album__artist__artist_name", weight="D")
-        #     )
-        #     .filter(rank=SearchQuery(query))
-        #     .order_by("-rank")
-        # )
-
-        # serializer = self.get_serializer(songs, many=True)
-        # return Response(serializer.data)
+        # for item in data["hits"]["hits"]:
+        #     item1 = item["_source"]
+        #     item1["_score"] = item["_score"]
+        #     # data = {}
+        #     # for key, val in item1.items():
+        #     #     if key == "id":
+        #     #         data[key] = val
+        #     #     elif key == "album":
+        #     #         data[key + "_id"] = val["id"]
+        #     #         data[key] = val["title"]
+        #     #         data["artist_id"] = val["artist"]["id"]
+        #     #         data["artist_name"] = val["artist"]["name"]
+        #     #     elif key == "genre":
+        #     #         data[key + "_id"] = val["id"]
+        #     #         data[key + "_name"] = val["name"]
+        #     #     else:
+        #     #         data[key] = val
+        #     search.append(item1)
+        # # print(data)
+        # return Response(search)
 
 
 class RatingViewSet(viewsets.ModelViewSet):
@@ -156,3 +171,33 @@ class GenreViewSet(viewsets.ModelViewSet):
     serializer_class = GenreSerializer
     authentication_classes = [CustomJWTAuthentication]
     permission_classes = [HasAnyPermissions]
+
+
+class SongDocumentView(DocumentViewSet):
+    document = SongDocument
+    serializer_class = SongDocumentSerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+    filter_backends = [
+        FilteringFilterBackend,
+        CompoundSearchFilterBackend,
+        SuggesterFilterBackend,
+        MultiMatchSearchFilterBackend,
+    ]
+
+    # completion = {"size": 50}
+    # pagination_class = PageNumberPagination
+    # page_size = 50
+    # page = 1
+    pagination_class = QueryFriendlyPageNumberPagination
+
+    search_fields = {
+        "song_name": {"fuzziness": "2"},
+        "album.title": {"fuzziness": "2"},
+        "album.artist.name": {"fuzziness": "1"},
+        "genre.name": {"fuzziness": "1"},
+    }
+
+    filter_fields = {"album": "album_name", "artist": "artist_name"}
+
+    ordering = ("_score",)

@@ -8,6 +8,8 @@ from artists.serializers import (
 )
 from users.serializers import UserIdSerializer, UserMinimalSerializer
 
+# from django_elasticsearch_dsl_drf.serializers import DocumentSerializer
+
 # from artists.serializers import AlbumSerializer
 from .models import Genre, Rating, Song, Playlist
 
@@ -158,3 +160,29 @@ class PlaylistSerializer(serializers.ModelSerializer):
                     instance.songs.remove(*song_ids)
 
         return instance
+
+
+class SongDocumentSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    song_name = serializers.CharField()
+    played = serializers.IntegerField()
+    album = serializers.SerializerMethodField()
+    genre = serializers.SerializerMethodField()
+
+    def get_album(self, obj):
+        album = obj.album
+
+        return {
+            "title": album.title,
+            "artist": {
+                "id": album.artist.id,
+                "name": album.artist.name,
+            },
+        }
+
+    def get_genre(self, obj):
+        genre = obj.genre
+        return {"id": genre.id, "name": genre.name}
+
+    class Meta:
+        fields = ("id", "song_name", "played", "album", "genre")

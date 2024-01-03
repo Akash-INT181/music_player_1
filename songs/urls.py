@@ -8,6 +8,7 @@ from .views import (
     PlaylistSongViewSet,
     PlaylistViewSet,
     RatingViewSet,
+    SongDocumentView,
     SongViewSet,
 )
 
@@ -26,6 +27,7 @@ router.register(
     PlaylistSongViewSet,
     basename="playlist-songs",
 )
+router.register(r"song-search", SongDocumentView, basename="songs-search")
 
 
 urlpatterns = [

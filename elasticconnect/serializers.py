@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from artists.models import Album, Artist
 
-from .elastic_search_config import es
+# from .elastic_search_config import es
 
 import json
 from songs.models import Genre, Rating, Song

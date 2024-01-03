@@ -23,7 +23,8 @@ class ArtistSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Artist
-        fields = "__all__"
+        # fields = "__all__"
+        exclude = ("password",)
 
 
 class ArtistOnlySerializer(serializers.ModelSerializer):
